@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	db "github.com/traivok/go-study/db/sqlc"
 	"net/http"
 )
@@ -29,6 +30,15 @@ func (server *Server) createAccount(context *gin.Context) {
 	account, err := server.store.CreateAccount(context, arg)
 
 	if err != nil {
+		if pqError, ok := err.(*pq.Error); ok {
+			switch pqError.Code.Class() {
+			case "23":
+				context.JSON(http.StatusForbidden, errorResponse(pqError))
+				return
+			}
+
+		}
+
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
